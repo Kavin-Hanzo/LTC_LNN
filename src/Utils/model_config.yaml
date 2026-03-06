@@ -1,0 +1,40 @@
+# ==========================================
+# UNIFIED CONFIGURATION KEYS
+# ==========================================
+
+system:
+  device: "cuda"               
+  dtype: "float32"
+  random_seed: 42
+
+data:
+  ticker: "AAPL"               # Main config uses: tickers: ["AAPL", "GOOGL"]
+  start_date: "2026-01-01"
+  end_date: "2026-01-31"
+  interval: "1h"               
+  train_split: 0.8             
+  sequence_length: 24
+  prediction_horizon: 1      # for long-run use 21  
+  target_column: "Close"
+  use_boruta: true             # Toggle to False for Baseline vs Hybrid comparison
+
+model:
+  architecture: "RNN"          # Main config uses: architectures: ["RNN", "LSTM", "LNN", "GRU"]
+  hidden_size: 24
+  num_layers: 1                
+  dropout_rate: 0.1
+  # ltc_params:                  # Ignored by RNN/LSTM/GRU builds
+  #   tau_constant: 1.0          
+  #   ode_unfolds: 6             
+
+training:
+  epochs: 50
+  batch_size: 32
+  learning_rate: 0.001
+  optimizer: "Adam"
+  loss_function: "MSELoss"    # try HuberLoss for long-run 
+  grad_clip: 1.0               
+
+logging:
+  save_dir: "./experiments/single_run"
+  track_metrics: ["MSE", "RMSE", "MAE", "R2", "MAPE", "sMAPE"]

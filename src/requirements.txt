@@ -1,0 +1,12 @@
+pandas
+numpy
+matplotlib
+scikit-learn
+pandas-ta
+yfinance
+ipykernel
+PyYaml
+Boruta
+torch
+torchinfo
+torchmetrics
