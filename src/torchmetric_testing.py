@@ -5,6 +5,7 @@ import matplotlib.pyplot as plt
 import os
 import pandas as pd
 import numpy as np
+from Utils.helpers import calculate_price_deviation
 
 class Evaluator:
     def __init__(self, model, config, dirs):
@@ -61,6 +62,16 @@ class Evaluator:
         # 5. Custom Metric: sMAPE (torch-native for GPU efficiency)
         preds_tensor = torch.cat(all_preds)
         actuals_tensor = torch.cat(all_actuals)
+
+        price_metrics = calculate_price_deviation(
+            actuals_tensor, 
+            preds_tensor, 
+            self.scaler
+        )
+
+        print(f"💵 Average Price Deviation: ${price_metrics['avg_usd_error']:.2f}")
+        metrics["Avg_USD_Error"] = price_metrics['avg_usd_error']
+
         smape_val = self._calculate_torch_smape(preds_tensor, actuals_tensor).item()
 
         metrics = {
