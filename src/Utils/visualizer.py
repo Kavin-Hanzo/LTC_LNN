@@ -1,97 +1,117 @@
+import os
 import yfinance as yf
 import pandas as pd
 import seaborn as sns
 import matplotlib.pyplot as plt
-import os
+import numpy as np
 
 class DataVisualizer:
-    def __init__(self, config, save_dir="./experiments/plots"):
-        self.cfg = config['data']
-        self.tickers = self.cfg.get('tickers', [self.cfg['ticker']])
-        self.save_dir = save_dir
-        os.makedirs(self.save_dir, exist_ok=True)
+    def __init__(self, config):
+        """
+        Initializes with config.yaml structure:
+        data_config -> historical_sets, tickers
+        logging -> save_dir
+        """
+        self.data_cfg = config['data_config']
+        self.tickers = self.data_cfg['tickers']
+        self.sets = self.data_cfg['historical_sets']
         
-    def fetch_multi_data(self):
-        """Downloads Close prices for all tickers in config."""
-        print(f"📥 Fetching data for: {self.tickers}...")
+        # Setup directories
+        self.base_dir = config['logging']['save_dir']
+        self.plot_dir = os.path.join(self.base_dir, "eda_plots")
+        os.makedirs(self.plot_dir, exist_ok=True)
+
+    def fetch_set_data(self, set_info):
+        """Downloads all tickers for a specific historical set."""
+        print(f"📥 Fetching data for {set_info['name']} ({set_info['interval']})...")
         data = yf.download(
-            self.tickers, 
-            start=self.cfg['start_date'], 
-            end=self.cfg['end_date'], 
-            interval=self.cfg['interval'],
+            self.tickers,
+            start=set_info['start'],
+            end=set_info['end'],
+            interval=set_info['interval'],
             progress=False
         )['Close']
         
-        # Ensure it's a DataFrame even if only one ticker is fetched
-        if isinstance(data, pd.Series):
+        # Handle cases where yfinance returns a Series for single ticker
+        if len(self.tickers) == 1:
             data = data.to_frame(name=self.tickers[0])
             
         return data.dropna()
 
-    def plot_price_distributions(self, data):
-        """
-        Plots the Histogram + KDE (Kernel Density Estimate) for each stock.
-        Reveals skewness and volatility 'fat tails'.
-        """
-        num_stocks = len(data.columns)
-        fig, axes = plt.subplots(num_stocks, 1, figsize=(10, 4 * num_stocks))
+    def plot_correlations(self, data, set_name):
+        """Plots the correlation matrix for the specific set of tickers."""
+        plt.figure(figsize=(10, 8))
+        corr = data.corr()
         
-        # Flatten axes if there's more than one, otherwise put in list
-        if num_stocks == 1:
+        sns.heatmap(corr, annot=True, cmap='coolwarm', fmt=".2f", linewidths=0.5)
+        plt.title(f"Correlation Matrix: {set_name}", fontsize=14, fontweight='bold')
+        
+        save_path = os.path.join(self.plot_dir, f"{set_name}_correlation.png")
+        plt.savefig(save_path, dpi=300)
+        plt.close()
+        print(f"✅ Correlation Plot: {save_path}")
+
+    def plot_normalized_trends(self, data, set_name):
+        """Plots trend lines for all tickers on a single graph (Normalized to Base 100)."""
+        # Normalize: (Price / Initial Price) * 100
+        normalized = (data / data.iloc[0]) * 100
+        
+        plt.figure(figsize=(12, 6))
+        for ticker in normalized.columns:
+            plt.plot(normalized.index, normalized[ticker], label=ticker, linewidth=1.5)
+            
+        plt.title(f"Normalized Price Trends: {set_name} (Base 100)", fontsize=14, fontweight='bold')
+        plt.xlabel("Timeline")
+        plt.ylabel("Growth (%)")
+        plt.legend(loc='best')
+        plt.grid(True, alpha=0.3)
+        
+        save_path = os.path.join(self.plot_dir, f"{set_name}_trends.png")
+        plt.savefig(save_path, dpi=300)
+        plt.close()
+        print(f"✅ Trend Plot: {save_path}")
+
+    def plot_value_distributions(self, data, set_name):
+        """Plots Histogram + KDE for each ticker in the set."""
+        num_tickers = len(data.columns)
+        fig, axes = plt.subplots(num_tickers, 1, figsize=(10, 4 * num_tickers))
+        
+        if num_tickers == 1:
             axes = [axes]
-        else:
-            axes = axes.flatten()
 
         for i, ticker in enumerate(data.columns):
             sns.histplot(data[ticker], kde=True, ax=axes[i], color='teal', bins=40)
-            axes[i].set_title(f"Price Value Distribution: {ticker}", fontsize=14, fontweight='bold')
-            axes[i].set_xlabel("Closing Price (USD)")
-            axes[i].set_ylabel("Frequency")
-            axes[i].grid(axis='y', alpha=0.3)
+            axes[i].set_title(f"{ticker} Distribution ({set_name})", fontsize=12)
+            axes[i].set_xlabel("Price (USD)")
+            axes[i].grid(axis='y', alpha=0.2)
 
         plt.tight_layout()
-        path = os.path.join(self.save_dir, "price_distributions.png")
-        plt.savefig(path, dpi=300)
+        save_path = os.path.join(self.plot_dir, f"{set_name}_distributions.png")
+        plt.savefig(save_path, dpi=300)
         plt.close()
-        print(f"✅ Price distributions saved to {path}")
+        print(f"✅ Distribution Plot: {save_path}")
 
-    def plot_ticker_correlation(self, data):
-        """Correlation matrix between different companies."""
-        plt.figure(figsize=(10, 8))
-        corr = data.corr()
-        sns.heatmap(corr, annot=True, cmap='coolwarm', fmt=".2f", linewidths=0.5)
-        plt.title("Inter-Company Price Correlation Matrix", fontweight='bold')
-        
-        path = os.path.join(self.save_dir, "company_correlation.png")
-        plt.savefig(path)
-        plt.close()
-        print(f"✅ Inter-company correlation saved to {path}")
-
-    def plot_trends(self, data):
-        """Normalized trend lines (Base 100) for performance comparison."""
-        # Normalize: (Price / First Price) * 100
-        normalized_data = (data / data.iloc[0]) * 100
-        
-        plt.figure(figsize=(12, 6))
-        for ticker in normalized_data.columns:
-            plt.plot(normalized_data.index, normalized_data[ticker], label=ticker, linewidth=2)
+    def run_all_eda(self):
+        """Iterates through all sets in config and generates plots."""
+        for set_info in self.sets:
+            set_name = set_info['name']
+            df = self.fetch_set_data(set_info)
             
-        plt.title("Normalized Growth Trends (Base 100 Index)", fontsize=14, fontweight='bold')
-        plt.xlabel("Timeline")
-        plt.ylabel("Relative Growth (%)")
-        plt.legend()
-        plt.grid(True, alpha=0.2)
-        
-        path = os.path.join(self.save_dir, "normalized_trends.png")
-        plt.savefig(path)
-        plt.close()
-        print(f"✅ Trend lines saved to {path}")
+            if df.empty:
+                print(f"⚠️ No data found for {set_name}, skipping...")
+                continue
+                
+            self.plot_correlations(df, set_name)
+            self.plot_normalized_trends(df, set_name)
+            self.plot_value_distributions(df, set_name)
 
-# Integration helper
-def run_full_eda(config):
-    viz = DataVisualizer(config)
-    data = viz.fetch_multi_data()
+# --- Usage Example ---
+if __name__ == "__main__":
+    import yaml
     
-    viz.plot_price_distributions(data)
-    viz.plot_ticker_correlation(data)
-    viz.plot_trends(data)
+    # Load your config.yaml
+    with open("config.yaml", "r") as f:
+        config = yaml.safe_load(f)
+    
+    visualizer = DataVisualizer(config)
+    visualizer.run_all_eda()

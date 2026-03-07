@@ -4,7 +4,6 @@ import numpy as np
 import pandas as pd
 from sklearn.ensemble import RandomForestRegressor
 from boruta import BorutaPy
-import torch
 
 def load_config(config_path="Utils/model_config.yaml"):
     """Loads the YAML configuration file."""
@@ -39,6 +38,7 @@ def apply_boruta(X, y):
     return selected_features
 
 def calculate_price_deviation(y_true_norm, y_pred_norm, scaler, target_idx=-1):
+    import torch
     """
     Converts normalized errors back to actual price deviations (USD).
     

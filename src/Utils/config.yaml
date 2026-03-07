@@ -7,16 +7,16 @@ data_config:
   # Research Paper: Three sets of data with specific intervals
   historical_sets:
     - name: "Set_A_Long_Term"
-      start: "2010-01-01"
+      start: "2015-01-01"
       end: "2025-12-31"
       interval: "1d"        # Standard daily analysis
     - name: "Set_B_Volatile"
-      start: "2015-01-01"
+      start: "2020-01-01"
       end: "2025-12-31"
       interval: "1d"        # Higher resolution for volatility
     - name: "Set_C_Recent"
-      start: "2025-01-01"
-      end: "2025-12-31"
+      start: "2026-01-01"
+      end: "2026-01-31"
       interval: "1h"
 
   prediction_horizon: 1     # Next step prediction
