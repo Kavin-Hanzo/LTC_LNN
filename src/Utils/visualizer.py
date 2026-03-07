@@ -13,78 +13,85 @@ class DataVisualizer:
         
     def fetch_multi_data(self):
         """Downloads Close prices for all tickers in config."""
-        print(f"Fetching data for: {self.tickers}...")
+        print(f"📥 Fetching data for: {self.tickers}...")
         data = yf.download(
             self.tickers, 
             start=self.cfg['start_date'], 
             end=self.cfg['end_date'], 
-            interval=self.cfg['interval']
+            interval=self.cfg['interval'],
+            progress=False
         )['Close']
+        
+        # Ensure it's a DataFrame even if only one ticker is fetched
+        if isinstance(data, pd.Series):
+            data = data.to_frame(name=self.tickers[0])
+            
         return data.dropna()
 
+    def plot_price_distributions(self, data):
+        """
+        Plots the Histogram + KDE (Kernel Density Estimate) for each stock.
+        Reveals skewness and volatility 'fat tails'.
+        """
+        num_stocks = len(data.columns)
+        fig, axes = plt.subplots(num_stocks, 1, figsize=(10, 4 * num_stocks))
+        
+        # Flatten axes if there's more than one, otherwise put in list
+        if num_stocks == 1:
+            axes = [axes]
+        else:
+            axes = axes.flatten()
+
+        for i, ticker in enumerate(data.columns):
+            sns.histplot(data[ticker], kde=True, ax=axes[i], color='teal', bins=40)
+            axes[i].set_title(f"Price Value Distribution: {ticker}", fontsize=14, fontweight='bold')
+            axes[i].set_xlabel("Closing Price (USD)")
+            axes[i].set_ylabel("Frequency")
+            axes[i].grid(axis='y', alpha=0.3)
+
+        plt.tight_layout()
+        path = os.path.join(self.save_dir, "price_distributions.png")
+        plt.savefig(path, dpi=300)
+        plt.close()
+        print(f"✅ Price distributions saved to {path}")
+
     def plot_ticker_correlation(self, data):
-        """Plots correlation matrix between different companies."""
+        """Correlation matrix between different companies."""
         plt.figure(figsize=(10, 8))
         corr = data.corr()
         sns.heatmap(corr, annot=True, cmap='coolwarm', fmt=".2f", linewidths=0.5)
-        plt.title("Correlation Matrix: Inter-Company Closing Prices")
+        plt.title("Inter-Company Price Correlation Matrix", fontweight='bold')
         
         path = os.path.join(self.save_dir, "company_correlation.png")
         plt.savefig(path)
         plt.close()
         print(f"✅ Inter-company correlation saved to {path}")
 
-    def plot_feature_correlation(self, df, ticker_name):
-        """Plots correlation between price and technical indicators for a single dataset."""
-        # Add a few technical indicators for context
-        df = df.copy()
-        df['MA10'] = df['Close'].rolling(window=10).mean()
-        df['MA50'] = df['Close'].rolling(window=50).mean()
-        df['Vol_Std'] = df['Close'].rolling(window=10).std()
-        df = df.dropna()
-
-        plt.figure(figsize=(10, 8))
-        sns.heatmap(df.corr(), annot=True, cmap='YlGnBu', fmt=".2f")
-        plt.title(f"Feature Correlation Matrix: {ticker_name}")
-        
-        path = os.path.join(self.save_dir, f"feature_corr_{ticker_name}.png")
-        plt.savefig(path)
-        plt.close()
-        print(f"✅ Feature correlation for {ticker_name} saved.")
-
     def plot_trends(self, data):
-        """Plots normalized trend lines for all companies in a single graph."""
-        # Normalize to 100 to compare growth regardless of price scale
+        """Normalized trend lines (Base 100) for performance comparison."""
+        # Normalize: (Price / First Price) * 100
         normalized_data = (data / data.iloc[0]) * 100
         
         plt.figure(figsize=(12, 6))
         for ticker in normalized_data.columns:
-            plt.plot(normalized_data.index, normalized_data[ticker], label=ticker, linewidth=1.5)
+            plt.plot(normalized_data.index, normalized_data[ticker], label=ticker, linewidth=2)
             
-        plt.title("Normalized Price Trends (Base 100)")
-        plt.xlabel("Date")
+        plt.title("Normalized Growth Trends (Base 100 Index)", fontsize=14, fontweight='bold')
+        plt.xlabel("Timeline")
         plt.ylabel("Relative Growth (%)")
         plt.legend()
-        plt.grid(True, alpha=0.3)
+        plt.grid(True, alpha=0.2)
         
-        path = os.path.join(self.save_dir, "price_trends.png")
+        path = os.path.join(self.save_dir, "normalized_trends.png")
         plt.savefig(path)
         plt.close()
         print(f"✅ Trend lines saved to {path}")
 
-# Example Usage
-if __name__ == "__main__":
-    from Utils import load_config
-    config = load_config("config.yaml")
+# Integration helper
+def run_full_eda(config):
     viz = DataVisualizer(config)
+    data = viz.fetch_multi_data()
     
-    # 1. Multi-company analysis
-    multi_df = viz.fetch_multi_data()
-    viz.plot_ticker_correlation(multi_df)
-    viz.plot_trends(multi_df)
-    
-    # 2. Individual feature analysis (for the first ticker)
-    # We fetch full OHLC for feature correlation
-    single_ticker = viz.tickers[0]
-    raw_df = yf.download(single_ticker, start=config['data']['start_date'], end=config['data']['end_date'])
-    viz.plot_feature_correlation(raw_df, single_ticker)
+    viz.plot_price_distributions(data)
+    viz.plot_ticker_correlation(data)
+    viz.plot_trends(data)
