@@ -5,7 +5,7 @@ import torch
 import math
 from torch.utils.data import TensorDataset, DataLoader
 from sklearn.preprocessing import MinMaxScaler
-from Utils import apply_boruta
+from Utils.helpers import apply_boruta
 
 class TimeSeriesDataModule:
     def __init__(self, config):
@@ -66,11 +66,12 @@ class TimeSeriesDataModule:
         target = df[target_col]
 
         if self.cfg.get('use_boruta', False):
-            selected_cols = apply_boruta(features, target)
+            selected_cols = apply_boruta(features, target.values.ravel())
             features = features[selected_cols]
             
         # 3. Scaling & Windowing
         full_df = pd.concat([features, target], axis=1)
+        full_df.columns = full_df.columns.astype(str)
         scaled_data = self.scaler.fit_transform(full_df)
         
         X, y = [], []
@@ -94,5 +95,5 @@ class TimeSeriesDataModule:
                           torch.tensor(y[split_idx:], dtype=torch.float32)),
             batch_size=self.train_cfg['batch_size'], shuffle=False
         )
-        
+        print(f"Finally selected features:{selected_cols}")
         return train_loader, val_loader, self.scaler, X.shape[2], seq_len

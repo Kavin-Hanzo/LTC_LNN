@@ -31,7 +31,7 @@ def apply_boruta(X, y):
     rf = RandomForestRegressor(n_jobs=-1, max_depth=5)
     boruta_selector = BorutaPy(rf, n_estimators='auto', verbose=0, random_state=42)
     
-    boruta_selector.fit(X.values, y.values)
+    boruta_selector.fit(X.values, y)
     
     selected_features = X.columns[boruta_selector.support_].tolist()
     print(f"✅ Boruta selected {len(selected_features)} out of {X.shape[1]} features.")
