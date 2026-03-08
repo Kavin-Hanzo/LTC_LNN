@@ -78,7 +78,7 @@ class LiquidNN(nn.Module):
 
 def create_model(config, input_dim):
     """Factory function to instantiate the correct model."""
-    specs = config['model_specs']
+    specs = config['model']
     device = torch.device(config['system']['device'])
     arch = specs['architecture'].upper()
     

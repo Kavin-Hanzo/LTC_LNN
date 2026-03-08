@@ -3,7 +3,7 @@
 # ==========================================
 
 system:
-  device: "cuda"               
+  device: "cpu"               
   dtype: "float32"
   random_seed: 42
 

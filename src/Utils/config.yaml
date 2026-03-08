@@ -33,19 +33,14 @@ data_config:
 # ==========================================
 # MODEL CONFIGURATION
 # ==========================================
-model_config:
-  architecture: "RNN"  # Choice: ['RNN', 'LSTM', 'LNN']
-  version: "v1.1_Interval_Aware"
-  
-  hidden_size: 128
-  num_layers: 2
-  dropout: 0.2
-  
-  # Liquid Neural Network Parameters
-  lnn_params:
-    time_constant_tau: 1.0  
-    use_euler_solver: true
-    dt: 0.1                 
+model:
+  architecture: "RNN"          # or LSTM, GRU, LNN
+  hidden_size: 128             # (Adjust integer per file)
+  num_layers: 2                # (Adjust integer per file)
+  dropout_rate: 0.2            # Standardized key name
+  ltc_params:                  # Always include this block (ignored by RNN/LSTM/GRU)
+    tau_constant: 1.0
+    ode_unfolds: 6                
   
   training:
     epochs: 50

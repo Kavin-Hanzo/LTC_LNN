@@ -7,8 +7,8 @@ import random
 from Utils.helpers import load_config, setup_directories
 from dataloader import TimeSeriesDataModule
 from build import create_model
-from training import Trainer
-from testing import Evaluator
+from torch_training import Trainer
+from torchmetric_testing import Evaluator
 
 def set_seed(seed=42):
     """Locks all random number generators for reproducible research."""
@@ -56,7 +56,6 @@ def main():
     try:
         from torchinfo import summary
         batch_size = config['training']['batch_size']
-        seq_len = config['data']['sequence_length']
         summary(model, input_size=(batch_size, seq_len, input_dim))
     except ImportError:
         print("ℹ️ Install 'torchinfo' for a detailed layer summary.")
@@ -72,7 +71,7 @@ def main():
     print("\n" + "="*40)
     print(" PHASE 4: EVALUATION & LOGGING ")
     print("="*40)
-    evaluator = Evaluator(trained_model, config, dirs)
+    evaluator = Evaluator(trained_model, config, dirs,scaler)
     metrics = evaluator.evaluate(val_loader)
 
     # Print Final Metrics Summary

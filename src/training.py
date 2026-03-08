@@ -5,11 +5,12 @@ import torch.optim as optim
 class Trainer:
     def __init__(self, model, config):
         self.model = model
-        self.cfg = config['training_hyperparams']
+        # Mapped to the nested training config in config.yaml
+        self.cfg = config['model_config']['training']
         self.device = torch.device(config['system']['device'])
         
-        # Setup Loss and Optimizer
-        self.criterion = getattr(nn, self.cfg['loss_function'])()
+        # Setup Loss and Optimizer (using 'criterion' key from config.yaml)
+        self.criterion = getattr(nn, self.cfg['criterion'])()
         self.optimizer = getattr(optim, self.cfg['optimizer'])(
             self.model.parameters(), 
             lr=self.cfg['learning_rate'],
@@ -20,6 +21,9 @@ class Trainer:
         print(f"🚀 Starting Training on {self.device}...")
         history = {'train_loss': [], 'val_loss': []}
         
+        # safely handle grad_clip if missing in config.yaml
+        grad_clip = self.cfg.get('grad_clip', 1.0)
+        
         for epoch in range(self.cfg['epochs']):
             self.model.train()
             train_loss = 0.0
@@ -28,13 +32,13 @@ class Trainer:
                 X_batch, y_batch = X_batch.to(self.device), y_batch.to(self.device)
                 
                 self.optimizer.zero_grad()
-                predictions = self.model(X_batch)  # no need squeezing
+                predictions = self.model(X_batch) 
                 
-                loss = self.criterion(predictions.view(-1), y_batch.view(-1))  # as per pred_horizon
+                loss = self.criterion(predictions.view(-1), y_batch.view(-1))
                 loss.backward()
                 
                 # Gradient Clipping
-                torch.nn.utils.clip_grad_norm_(self.model.parameters(), self.cfg['grad_clip'])
+                torch.nn.utils.clip_grad_norm_(self.model.parameters(), grad_clip)
                 self.optimizer.step()
                 
                 train_loss += loss.item()

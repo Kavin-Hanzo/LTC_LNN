@@ -8,9 +8,12 @@ import os
 class Evaluator:
     def __init__(self, model, config, dirs):
         self.model = model
+        self.config = config
         self.device = torch.device(config['system']['device'])
-        self.ticker = config['data_setup']['ticker']
-        self.arch = config['model_specs']['architecture']
+        # Extract the first ticker from the list for single-model testing
+        self.ticker = config['data_config']['tickers'][0]
+        self.arch = config['model_config']['architecture']
+        self.horizon = config['data_config']['prediction_horizon']
         self.dirs = dirs
 
     def evaluate(self, val_loader):
@@ -46,7 +49,7 @@ class Evaluator:
         smape = 100/len(y_true) * np.sum(2 * np.abs(y_pred - y_true) / (np.abs(y_true) + np.abs(y_pred)))
 
         return {
-            "Horizon": self.config['data']['prediction_horizon'],
+            "Horizon": self.horizon,
             "MSE": mean_squared_error(y_true, y_pred),
             "RMSE": np.sqrt(mean_squared_error(y_true, y_pred)),
             "MAE": mean_absolute_error(y_true, y_pred),
@@ -61,16 +64,13 @@ class Evaluator:
         df.to_csv(csv_path, index=False)
         print(f"✅ Metrics saved to {csv_path}")
 
-        # Calculate how far out we are looking
-        h = self.config['data']['prediction_horizon']
-
         plt.figure(figsize=(12, 6))
 
         # We shift the prediction plot to align with the actual day it was aiming for
         plt.plot(y_true[-100:], label="Actual Price", color='blue', alpha=0.6)
-        plt.plot(y_pred[-100:], label=f"Predicted (h={h})", color='red', linestyle='--')
+        plt.plot(y_pred[-100:], label=f"Predicted (h={self.horizon})", color='red', linestyle='--')
 
-        plt.title(f"{self.arch} Forecasting: {self.ticker} (Horizon: {h} days)")
+        plt.title(f"{self.arch} Forecasting: {self.ticker} (Horizon: {self.horizon} steps)")
         plt.ylabel("Scaled Price")
         plt.xlabel("Time Steps (Validation Set)")
         plt.legend()
