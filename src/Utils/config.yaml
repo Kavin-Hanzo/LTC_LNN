@@ -47,7 +47,8 @@ model:
     batch_size: 64
     learning_rate: 0.001
     optimizer: "Adam"
-    criterion: "MSELoss"
+    loss_function: "MSELoss"
+    grad_clip: 1.0
     device_id: 0 
 
 # ==========================================

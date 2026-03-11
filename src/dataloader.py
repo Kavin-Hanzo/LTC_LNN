@@ -95,5 +95,5 @@ class TimeSeriesDataModule:
                           torch.tensor(y[split_idx:], dtype=torch.float32)),
             batch_size=self.train_cfg['batch_size'], shuffle=False
         )
-        print(f"Finally selected features:{selected_cols}")
+        print(f"Finally selected features:{features.columns}")
         return train_loader, val_loader, self.scaler, X.shape[2], seq_len

@@ -77,7 +77,8 @@ class Evaluator:
             "RMSE": np.sqrt(mse_val),
             "MAE": mae_val,
             "R2": r2_val,
-            "sMAPE": smape_val
+            "sMAPE": smape_val,
+            "AVG DEV": price_metrics["avg_usd_error"]
         }
 
         self._save_results(metrics, actuals_tensor.cpu().numpy(), preds_tensor.cpu().numpy())
