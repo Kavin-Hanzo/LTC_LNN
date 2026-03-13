@@ -1,3 +1,2 @@
-/src/Utils/experiments/**
-**/experiments
 **/__pycache__
+**/artifacts
