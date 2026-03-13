@@ -102,11 +102,11 @@ def plot_predictions(
     x = np.arange(len(y_true_line))
 
     fig, axes = plt.subplots(2, 1, figsize=(14, 8), gridspec_kw={"height_ratios": [3, 1]})
-    fig.patch.set_facecolor("#0f0f0f")
+    fig.patch.set_facecolor("#ffffff")
 
     # ── top panel: trend lines
     ax = axes[0]
-    ax.set_facecolor("#1a1a2e")
+    ax.set_facecolor("#ffffff")
     ax.plot(x, y_true_line, color="#00d4ff", linewidth=1.5,
             label="Actual Close",    alpha=0.9)
     ax.plot(x, y_pred_line, color="#ff6b35", linewidth=1.5,
@@ -115,25 +115,25 @@ def plot_predictions(
                     alpha=0.08, color="#ffffff")
 
     ax.set_title(f"{arch.upper()} — Predicted vs Actual Close Price (test set, step+1)",
-                 color="white", fontsize=13, pad=12)
-    ax.set_ylabel("Price ($)", color="white")
-    ax.tick_params(colors="white")
+                 color="black", fontsize=13, pad=12)
+    ax.set_ylabel("Price ($)", color="black")
+    ax.tick_params(colors="black")
     ax.yaxis.set_major_formatter(mticker.FormatStrFormatter("$%.0f"))
     for spine in ax.spines.values():
         spine.set_edgecolor("#444")
-    ax.legend(facecolor="#1a1a2e", labelcolor="white", fontsize=10)
+    ax.legend(facecolor="#ffffff", labelcolor="black", fontsize=10)
     ax.grid(True, color="#333", linewidth=0.5, alpha=0.6)
 
     # ── bottom panel: residuals
     ax2 = axes[1]
-    ax2.set_facecolor("#1a1a2e")
+    ax2.set_facecolor("#ffffff")
     residuals = y_pred_line - y_true_line
     colors = ["#00c851" if r >= 0 else "#ff4444" for r in residuals]
     ax2.bar(x, residuals, color=colors, alpha=0.7, width=1.0)
     ax2.axhline(0, color="#888", linewidth=0.8)
-    ax2.set_ylabel("Residual ($)", color="white")
-    ax2.set_xlabel("Test sample index", color="white")
-    ax2.tick_params(colors="white")
+    ax2.set_ylabel("Residual ($)", color="black")
+    ax2.set_xlabel("Test sample index", color="black")
+    ax2.tick_params(colors="black")
     for spine in ax2.spines.values():
         spine.set_edgecolor("#444")
     ax2.grid(True, color="#333", linewidth=0.5, alpha=0.4)

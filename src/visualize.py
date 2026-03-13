@@ -46,12 +46,12 @@ except ImportError:
 from models import SUPPORTED_MODELS
 
 # ── dark theme constants ──────────────────────────────────────────────────────
-BG       = "#0f0f0f"
-PANEL_BG = "#1a1a2e"
+BG       = "#ffffff"
+PANEL_BG = "#ffffff"
 ACTUAL   = "#00d4ff"
 COLORS   = ["#ff6b35", "#00c851", "#ffd700", "#c77dff"]
 GRID_C   = "#333333"
-TEXT_C   = "white"
+TEXT_C   = "black"
 
 
 # ── data loading ──────────────────────────────────────────────────────────────

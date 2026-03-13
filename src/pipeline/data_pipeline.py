@@ -141,17 +141,21 @@ def time_split(
     val_split: float,
     test_split: float,
 ) -> Tuple[pd.DataFrame, pd.DataFrame, pd.DataFrame]:
-    """Chronological split — NO shuffle. Layout: [train | val | test]"""
+    """
+    Chronological split — NO shuffle. Layout: [train | val | test]
+    If val_split=0.0, val DataFrame is empty (build_dataloaders handles carving).
+    """
     n       = len(df)
     n_test  = int(n * test_split)
     n_val   = int(n * val_split)
     n_train = n - n_val - n_test
 
     train = df.iloc[:n_train]
-    val   = df.iloc[n_train : n_train + n_val]
+    val   = df.iloc[n_train : n_train + n_val]   # empty slice if n_val=0
     test  = df.iloc[n_train + n_val :]
 
-    print(f"  [split]    train={len(train)}  val={len(val)}  test={len(test)}")
+    if n_val > 0:
+        print(f"  [split]    train={len(train)}  val={len(val)}  test={len(test)}")
     return train, val, test
 
 
@@ -308,6 +312,12 @@ def build_dataloaders(
     """
     End-to-end pipeline. Returns DataLoaders ready for Trainer.
 
+    Split modes:
+      val_split > 0  ->  train | val | test   (e.g. 0.70 / 0.15 / 0.15)
+      val_split = 0  ->  train+val | test     (e.g. 0.80 / 0.20)
+                         val is carved as the last 10% of the train portion
+                         so early stopping still works without wasting test data.
+
     Args:
         config:  full config dict from load_config()
         ticker:  override config.data.ticker  (CLI / run_experiments.py)
@@ -330,9 +340,23 @@ def build_dataloaders(
     print(f"\n[DataPipeline]  ticker={ticker}  W={window_size}  H={horizon}")
 
     # steps 1-4
-    raw_df                            = fetch_ohlcv(ticker, config["data"]["period"])
-    feat_df                           = engineer_features(raw_df, feature_list)
-    train_df, val_df, test_df         = time_split(feat_df, val_split, test_split)
+    raw_df  = fetch_ohlcv(ticker, config["data"]["period"])
+    feat_df = engineer_features(raw_df, feature_list)
+
+    if val_split > 0:
+        # explicit 3-way split: train | val | test
+        train_df, val_df, test_df = time_split(feat_df, val_split, test_split)
+    else:
+        # 80/20 mode: split into train_block | test only
+        # then carve last 10% of train_block as val for early stopping
+        _, dummy_val, test_df = time_split(feat_df, val_split=0.0, test_split=test_split)
+        n_train_block = len(feat_df) - len(test_df)
+        n_inner_val   = max(1, int(n_train_block * 0.10))
+        train_df      = feat_df.iloc[: n_train_block - n_inner_val]
+        val_df        = feat_df.iloc[n_train_block - n_inner_val : n_train_block]
+        print(f"  [split]    80/20 mode — inner val carved from train tail")
+        print(f"  [split]    train={len(train_df)}  val={len(val_df)}  test={len(test_df)}")
+
     train_sc, val_sc, test_sc, scaler = fit_scale(train_df, val_df, test_df)
 
     # step 5 — datasets
