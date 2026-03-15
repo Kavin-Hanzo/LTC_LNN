@@ -40,6 +40,7 @@ from app.schemas     import (
 SUPPORTED_TICKERS = [
     "AAPL", "TSLA", "GOOGL", "MSFT", "AMZN",
     "NVDA", "META", "NFLX",  "AMD",  "INTC",
+    "BLK","JPM"
 ]
 
 ARTIFACTS_DIR = os.environ.get("ARTIFACTS_DIR", "artifacts/best")
@@ -220,13 +221,13 @@ def _validate_ticker(ticker: str):
 
 
 def _validate_horizon(horizon: int, store):
-    if horizon > store.forecast_horizon:
+    # Autoregressive model rolls forward step-by-step at inference time,
+    # so any horizon value is valid regardless of what the model was trained with.
+    # We only enforce a reasonable upper bound to protect server resources.
+    MAX_HORIZON = 365
+    if horizon > MAX_HORIZON:
         raise HTTPException(
             status_code = 400,
-            detail      = (
-                f"Requested horizon={horizon} exceeds trained "
-                f"horizon={store.forecast_horizon}. "
-                f"Use horizon <= {store.forecast_horizon} "
-                f"or retrain with a larger horizon."
-            ),
+            detail      = f"horizon={horizon} exceeds maximum allowed value of {MAX_HORIZON}."
         )
+    

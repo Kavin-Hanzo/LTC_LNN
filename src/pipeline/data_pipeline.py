@@ -191,43 +191,46 @@ def fit_scale(
 
 
 def inverse_scale_close(
-    scaled_values: np.ndarray,
-    scaler:        MinMaxScaler,
-    close_col_idx: int,
-    n_features:    int,
+    scaled_values:       np.ndarray,
+    scaler:              MinMaxScaler,
+    close_col_idx:       int,
+    n_features:          int = None,
+    original_close_idx:  int = None,
 ) -> np.ndarray:
     """
     Inverse-transform Close price predictions back to original dollar scale.
 
-    This function is NOT called during training — it is used AFTER training
-    by evaluate.py (metrics on real $ prices) and predictor.py (API response).
-
-    How it works:
-      MinMaxScaler.inverse_transform() needs a full (n, n_features) array.
-      We build a zero dummy array, slot the Close predictions into the correct
-      column, inverse-transform the whole thing, then extract just that column.
+    The scaler was ALWAYS fitted on the full original feature set (pre-Boruta).
+    So the dummy array must always be as wide as scaler.n_features_in_, and
+    Close must be placed at its ORIGINAL column index (pre-Boruta).
 
     Args:
-        scaled_values:  shape (batch, horizon)  OR  (horizon,)  — scaled 0-1
-        scaler:         the fitted MinMaxScaler saved during training
-        close_col_idx:  index of the Close column in the feature list
-        n_features:     total number of features (= scaler input width)
+        scaled_values:      shape (batch, horizon) or (horizon,) or (N, 1) — scaled 0-1
+        scaler:             the fitted MinMaxScaler (always fitted on original features)
+        close_col_idx:      index of Close — post-Boruta if Boruta was used
+        n_features:         ignored (kept for backward compat). scaler width used instead.
+        original_close_idx: pre-Boruta Close index. If None, close_col_idx is used as-is.
 
     Returns:
         Array of same shape as scaled_values, in original dollar prices.
     """
     was_1d = scaled_values.ndim == 1
     if was_1d:
-        scaled_values = scaled_values[np.newaxis, :]       # (1, horizon)
+        scaled_values = scaled_values[np.newaxis, :]       # (1, N)
 
     batch, horizon = scaled_values.shape
 
-    # build dummy array: zeros everywhere except the Close column
-    dummy = np.zeros((batch * horizon, n_features), dtype=np.float32)
-    dummy[:, close_col_idx] = scaled_values.reshape(-1)
+    # always use the scaler's own fitted width — immune to Boruta column drops
+    scaler_width = scaler.n_features_in_
 
-    # inverse transform and extract Close column
-    inversed = scaler.inverse_transform(dummy)[:, close_col_idx]
+    # use original Close index if provided, otherwise fall back to close_col_idx
+    col_idx = original_close_idx if original_close_idx is not None else close_col_idx
+
+    # build dummy array at full scaler width
+    dummy = np.zeros((batch * horizon, scaler_width), dtype=np.float32)
+    dummy[:, col_idx] = scaled_values.reshape(-1)
+
+    inversed = scaler.inverse_transform(dummy)[:, col_idx]
     result   = inversed.reshape(batch, horizon)
 
     return result[0] if was_1d else result
@@ -293,13 +296,16 @@ class TimeSeriesDataset(Dataset):
 
 @dataclass
 class DataLoaders:
-    train:          DataLoader
-    val:            DataLoader
-    test:           DataLoader
-    scaler:         MinMaxScaler
-    feature_cols:   List[str]
-    close_col_idx:  int
-    dates_test:     pd.DatetimeIndex   # test set dates, used by visualize.py
+    train:                 DataLoader
+    val:                   DataLoader
+    test:                  DataLoader
+    scaler:                MinMaxScaler
+    feature_cols:          List[str]      # final selected features (post-Boruta if enabled)
+    close_col_idx:         int            # Close index in final feature_cols (post-Boruta)
+    original_close_col_idx: int           # Close index in ORIGINAL feature list (pre-Boruta)
+    dates_test:            pd.DatetimeIndex
+    boruta_used:           bool = False
+    all_feature_cols:      List[str] = None
 
 
 # ── 7. Master builder ─────────────────────────────────────────────────────────
@@ -335,7 +341,8 @@ def build_dataloaders(
         raise ValueError(
             "'Close' must be in config.data.features — it is the forecast target."
         )
-    close_col_idx = feature_list.index("Close")
+    close_col_idx          = feature_list.index("Close")
+    original_close_col_idx = close_col_idx   # preserved — scaler always needs this
 
     print(f"\n[DataPipeline]  ticker={ticker}  W={window_size}  H={horizon}")
 
@@ -359,6 +366,40 @@ def build_dataloaders(
 
     train_sc, val_sc, test_sc, scaler = fit_scale(train_df, val_df, test_df)
 
+    # ── step 4b: optional Boruta column selection (reads pre-computed JSON) ───
+    # Boruta is NOT re-run here. select_features.py must be run first to
+    # produce feature_selection/{ticker}.json. This step just reads that file
+    # and drops the rejected columns from the scaled arrays.
+    boruta_used      = config.get("boruta", {}).get("enabled", False)
+    all_feature_cols = feature_list   # preserve original list for meta.json
+
+    if boruta_used:
+        fs_path = os.path.join("feature_selection", f"{ticker}.json")
+        if not os.path.exists(fs_path):
+            raise FileNotFoundError(
+                f"Boruta is enabled but no feature selection JSON found for '{ticker}'.\n"
+                f"Run first:  python select_features.py --ticker {ticker}\n"
+                f"Expected:   {fs_path}"
+            )
+        with open(fs_path) as f:
+            import json as _json
+            fs_result = _json.load(f)
+
+        selected_features = fs_result["selected_features"]
+        new_close_idx     = fs_result["close_col_idx"]
+
+        # get column indices of selected features in original feature_list
+        selected_idx  = [feature_list.index(f) for f in selected_features]
+        train_sc      = train_sc[:, selected_idx]
+        val_sc        = val_sc[:,   selected_idx]
+        test_sc       = test_sc[:,  selected_idx]
+        feature_list  = selected_features
+        close_col_idx = new_close_idx
+
+        print(f"  [boruta]   loaded {fs_path}")
+        print(f"  [boruta]   features: {len(all_feature_cols)} -> "
+              f"{len(feature_list)}  kept={feature_list}")
+
     # step 5 — datasets
     train_ds = TimeSeriesDataset(train_sc, window_size, horizon, close_col_idx)
     val_ds   = TimeSeriesDataset(val_sc,   window_size, horizon, close_col_idx)
@@ -375,11 +416,14 @@ def build_dataloaders(
                               shuffle=False, drop_last=False)
 
     return DataLoaders(
-        train         = train_loader,
-        val           = val_loader,
-        test          = test_loader,
-        scaler        = scaler,
-        feature_cols  = feature_list,
-        close_col_idx = close_col_idx,
-        dates_test    = test_df.index,
+        train                  = train_loader,
+        val                    = val_loader,
+        test                   = test_loader,
+        scaler                 = scaler,
+        feature_cols           = feature_list,
+        close_col_idx          = close_col_idx,
+        original_close_col_idx = original_close_col_idx,
+        dates_test             = test_df.index,
+        boruta_used            = boruta_used,
+        all_feature_cols       = all_feature_cols,
     )

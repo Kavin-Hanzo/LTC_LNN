@@ -87,8 +87,8 @@ def main():
     print(f"{'='*60}")
 
     # ── 1. Data
-    loaders = build_dataloaders(config, ticker=ticker)
-    input_dim  = len(config["data"]["features"])
+    loaders    = build_dataloaders(config, ticker=ticker)
+    input_dim  = len(loaders.feature_cols)   # post-Boruta dim (may be < original)
     n_features = input_dim
 
     # ── 2. Model
@@ -112,14 +112,15 @@ def main():
     model.load_state_dict(best_ckpt["state_dict"])
 
     evaluator = Evaluator(
-        model         = model,
-        test_loader   = loaders.test,
-        scaler        = loaders.scaler,
-        close_col_idx = loaders.close_col_idx,
-        n_features    = n_features,
-        arch          = args.model,
-        config        = config,
-        device        = device,
+        model                  = model,
+        test_loader            = loaders.test,
+        scaler                 = loaders.scaler,
+        close_col_idx          = loaders.close_col_idx,
+        n_features             = n_features,
+        arch                   = args.model,
+        config                 = config,
+        device                 = device,
+        original_close_col_idx = loaders.original_close_col_idx,
     )
     metrics = evaluator.run()
 
@@ -137,14 +138,20 @@ def main():
     joblib.dump(loaders.scaler, scaler_path)
     print(f"\n  Scaler  → {scaler_path}")
 
+    # input_dim after Boruta may differ from original feature count
+    final_input_dim = len(loaders.feature_cols)
+
     meta = {
         "arch":             args.model,
         "ticker":           ticker,
         "window_size":      config["data"]["window_size"],
         "forecast_horizon": config["training"]["forecast_horizon"],
-        "features":         config["data"]["features"],
-        "close_col_idx":    loaders.close_col_idx,
-        "input_dim":        input_dim,
+        "features":             loaders.feature_cols,
+        "all_features":         loaders.all_feature_cols,
+        "boruta_used":          loaders.boruta_used,
+        "close_col_idx":        loaders.close_col_idx,
+        "original_close_col_idx": loaders.original_close_col_idx,
+        "input_dim":        final_input_dim,           # matches model input layer
         "hidden_size":      config["models"]["hidden_size"],
         "num_layers":       config["models"]["num_layers"],
         "dropout":          config["models"]["dropout"],

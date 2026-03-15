@@ -83,7 +83,7 @@ def parse_args():
 def run_one(arch: str, config: dict, loaders, device: torch.device) -> dict:
     """Train + evaluate a single architecture. Returns metrics dict."""
 
-    input_dim  = len(config["data"]["features"])
+    input_dim  = len(loaders.feature_cols)   # post-Boruta dim
     n_features = input_dim
 
     model = build_model(arch, config, input_dim=input_dim)
@@ -103,14 +103,15 @@ def run_one(arch: str, config: dict, loaders, device: torch.device) -> dict:
     model.load_state_dict(ckpt["state_dict"])
 
     evaluator = Evaluator(
-        model         = model,
-        test_loader   = loaders.test,
-        scaler        = loaders.scaler,
-        close_col_idx = loaders.close_col_idx,
-        n_features    = n_features,
-        arch          = arch,
-        config        = config,
-        device        = device,
+        model                  = model,
+        test_loader            = loaders.test,
+        scaler                 = loaders.scaler,
+        close_col_idx          = loaders.close_col_idx,
+        n_features             = n_features,
+        arch                   = arch,
+        config                 = config,
+        device                 = device,
+        original_close_col_idx = loaders.original_close_col_idx,
     )
     metrics = evaluator.run()
 
@@ -131,8 +132,11 @@ def run_one(arch: str, config: dict, loaders, device: torch.device) -> dict:
         "ticker":           config["data"]["ticker"],
         "window_size":      config["data"]["window_size"],
         "forecast_horizon": config["training"]["forecast_horizon"],
-        "features":         config["data"]["features"],
-        "close_col_idx":    loaders.close_col_idx,
+        "features":               loaders.feature_cols,
+        "all_features":           loaders.all_feature_cols,
+        "boruta_used":            loaders.boruta_used,
+        "close_col_idx":          loaders.close_col_idx,
+        "original_close_col_idx": loaders.original_close_col_idx,
         "input_dim":        input_dim,
         "hidden_size":      config["models"]["hidden_size"],
         "num_layers":       config["models"]["num_layers"],
@@ -153,25 +157,26 @@ def print_leaderboard(results: list):
     results_sorted = sorted(results, key=lambda r: r.get("test_rmse", float("inf")))
 
     col = 11
-    print(f"\n{'='*72}")
+    print(f"\n{'='*80}")
     print(f"  EXPERIMENT RESULTS  (sorted by Test RMSE)")
     print(f"  {'RANK':<6}{'ARCH':<8}{'TEST MAE':>{col}}{'TEST RMSE':>{col}}"
-          f"{'TEST MAPE%':>{col}}{'VAL LOSS':>{col}}{'EPOCHS':>{col}}")
-    print(f"  {'-'*66}")
+          f"{'TEST MAPE%':>{col}}{'TEST R2':>{col}}{'VAL LOSS':>{col}}{'EPOCHS':>{col}}")
+    print(f"  {'-'*74}")
 
     for i, r in enumerate(results_sorted):
         rank = f"#{i+1}" + (" ★" if i == 0 else "")
         print(
             f"  {rank:<6}"
             f"{r.get('arch','?').upper():<8}"
-            f"{r.get('test_mae',   'N/A'):>{col}}"
-            f"{r.get('test_rmse',  'N/A'):>{col}}"
-            f"{r.get('test_mape',  'N/A'):>{col}}"
-            f"{r.get('best_val_loss','N/A'):>{col}}"
+            f"{r.get('test_mae',      'N/A'):>{col}}"
+            f"{r.get('test_rmse',     'N/A'):>{col}}"
+            f"{r.get('test_mape',     'N/A'):>{col}}"
+            f"{r.get('test_r2',       'N/A'):>{col}}"
+            f"{r.get('best_val_loss', 'N/A'):>{col}}"
             f"{r.get('epochs_trained','N/A'):>{col}}"
         )
 
-    print(f"{'='*72}")
+    print(f"{'='*80}")
     best = results_sorted[0]
     print(f"\n  Best model: {best['arch'].upper()}  "
           f"(RMSE={best.get('test_rmse')}  MAPE={best.get('test_mape')}%)")

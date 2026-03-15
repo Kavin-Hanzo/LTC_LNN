@@ -2,6 +2,7 @@
 torch>=2.0.0
 numpy>=1.24.0
 scikit-learn>=1.3.0
+boruta>=0.3.0          # Boruta feature selection (optional, needed if boruta.enabled=true)
 
 # Data
 yfinance>=0.2.40

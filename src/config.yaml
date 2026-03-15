@@ -3,6 +3,9 @@ data:
   period: "5y"               # yfinance period string
   window_size: 30            # W: lookback days fed to model as sequence
   features:
+    - "Open"
+    - "High"
+    - "Low"
     - "Close"
     - "Volume"
     - "RSI"
@@ -10,14 +13,21 @@ data:
     - "SMA_20"
 
 training:
-  forecast_horizon: 30       # N: default days to forecast (overridable via CLI/API)
+  forecast_horizon: 1        # single-step autoregressive — predictor rolls forward N times at inference
   batch_size: 32
-  epochs: 50
+  epochs: 100
   lr: 0.001
   early_stopping_patience: 10
-  val_split: 0.15
-  test_split: 0.15
+  val_split: 0.0
+  test_split: 0.2
   seed: 42
+
+boruta:
+  enabled: false             # true -> run Boruta after scaling, drop unimportant features
+  n_estimators: 100          # RandomForest trees used by Boruta
+  max_iter: 100              # max Boruta iterations
+  perc: 100                  # threshold percentile (100 = strict, lower = more lenient)
+  alpha: 0.05                # p-value threshold for feature acceptance
 
 models:
   hidden_size: 64
