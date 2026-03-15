@@ -1,0 +1,62 @@
+{
+  "ticker": "AMD",
+  "period": "5y",
+  "generated_at": "2026-03-15 11:50:20",
+  "all_features": [
+    "Open",
+    "High",
+    "Low",
+    "Close",
+    "Volume",
+    "RSI",
+    "MACD",
+    "SMA_20"
+  ],
+  "selected_features": [
+    "Open",
+    "High",
+    "Low",
+    "Close",
+    "RSI",
+    "SMA_20"
+  ],
+  "rejected_features": [
+    "Volume",
+    "MACD"
+  ],
+  "close_col_idx": 3,
+  "n_features_before": 8,
+  "n_features_after": 6,
+  "boruta_params": {
+    "n_estimators": 100,
+    "max_iter": 100,
+    "perc": 100,
+    "alpha": 0.05,
+    "max_depth": 5,
+    "random_state": 42
+  },
+  "ranking": {
+    "Open": 1,
+    "High": 1,
+    "Low": 1,
+    "Close": 1,
+    "Volume": 4,
+    "RSI": 1,
+    "MACD": 3,
+    "SMA_20": 2
+  },
+  "confirmed": [
+    "Open",
+    "High",
+    "Low",
+    "Close",
+    "RSI"
+  ],
+  "tentative": [
+    "SMA_20"
+  ],
+  "rejected": [
+    "Volume",
+    "MACD"
+  ]
+}

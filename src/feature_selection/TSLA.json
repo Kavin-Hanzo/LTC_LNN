@@ -1,0 +1,62 @@
+{
+  "ticker": "TSLA",
+  "period": "5y",
+  "generated_at": "2026-03-15 11:49:41",
+  "all_features": [
+    "Open",
+    "High",
+    "Low",
+    "Close",
+    "Volume",
+    "RSI",
+    "MACD",
+    "SMA_20"
+  ],
+  "selected_features": [
+    "Open",
+    "High",
+    "Low",
+    "Close",
+    "MACD"
+  ],
+  "rejected_features": [
+    "Volume",
+    "RSI",
+    "SMA_20"
+  ],
+  "close_col_idx": 3,
+  "n_features_before": 8,
+  "n_features_after": 5,
+  "boruta_params": {
+    "n_estimators": 100,
+    "max_iter": 100,
+    "perc": 100,
+    "alpha": 0.05,
+    "max_depth": 5,
+    "random_state": 42
+  },
+  "ranking": {
+    "Open": 1,
+    "High": 1,
+    "Low": 1,
+    "Close": 1,
+    "Volume": 4,
+    "RSI": 3,
+    "MACD": 2,
+    "SMA_20": 5
+  },
+  "confirmed": [
+    "Open",
+    "High",
+    "Low",
+    "Close"
+  ],
+  "tentative": [
+    "MACD"
+  ],
+  "rejected": [
+    "Volume",
+    "RSI",
+    "SMA_20"
+  ]
+}
