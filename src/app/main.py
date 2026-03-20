@@ -40,7 +40,7 @@ from app.schemas     import (
 SUPPORTED_TICKERS = [
     "AAPL", "TSLA", "GOOGL", "MSFT", "AMZN",
     "NVDA", "META", "NFLX",  "AMD",  "INTC",
-    "BLK","JPM"
+    "BLK","JPM","IBM"
 ]
 
 ARTIFACTS_DIR = os.environ.get("ARTIFACTS_DIR", "artifacts/best")
@@ -80,7 +80,10 @@ app.add_middleware(
     allow_headers     = ["*"],
 )
 
-
+# for home/root
+@app.get("/")
+def greeting():
+    return "<h2> Hello Client !</h2>"
 # ── /health ───────────────────────────────────────────────────────────────────
 
 @app.get("/health", response_model=HealthResponse, tags=["meta"])

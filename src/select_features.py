@@ -269,7 +269,7 @@ def _load_supported_tickers() -> List[str]:
     SUPPORTED_TICKERS = [
         "AAPL", "TSLA", "GOOGL", "MSFT", "AMZN",
         "NVDA", "META", "NFLX",  "AMD",  "INTC",
-        "BLK","JPM"
+        "BLK","JPM","IBM"
     ]
     # try:
     #     sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))

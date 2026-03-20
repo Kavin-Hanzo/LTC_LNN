@@ -45,14 +45,14 @@ def load_config(path: str = "config.yaml") -> dict:
 
 # ── 1. Fetch ──────────────────────────────────────────────────────────────────
 
-def fetch_ohlcv(ticker: str, period: str) -> pd.DataFrame:
+def fetch_ohlcv(ticker: str, period: str, interval: str) -> pd.DataFrame:
     """
     Download OHLCV from yfinance.
     Returns DataFrame indexed by Date: Open, High, Low, Close, Volume.
     """
     import yfinance as yf
 
-    df = yf.download(ticker, period=period, auto_adjust=True, progress=False)
+    df = yf.download(ticker, period=period, interval=interval, auto_adjust=True, progress=False)
 
     if df.empty:
         raise ValueError(f"No data returned for ticker '{ticker}' (period={period}).")
@@ -347,7 +347,7 @@ def build_dataloaders(
     print(f"\n[DataPipeline]  ticker={ticker}  W={window_size}  H={horizon}")
 
     # steps 1-4
-    raw_df  = fetch_ohlcv(ticker, config["data"]["period"])
+    raw_df  = fetch_ohlcv(ticker, config["data"]["period"], config["data"]["interval"])
     feat_df = engineer_features(raw_df, feature_list)
 
     if val_split > 0:
