@@ -40,7 +40,6 @@ from app.schemas     import (
 SUPPORTED_TICKERS = [
     "AAPL", "TSLA", "GOOGL", "MSFT", "AMZN",
     "NVDA", "META", "NFLX",  "AMD",  "INTC",
-    "BLK","JPM","IBM"
 ]
 
 ARTIFACTS_DIR = os.environ.get("ARTIFACTS_DIR", "artifacts/best")
@@ -80,10 +79,7 @@ app.add_middleware(
     allow_headers     = ["*"],
 )
 
-# for home/root
-@app.get("/")
-def greeting():
-    return "<h2> Hello Client !</h2>"
+
 # ── /health ───────────────────────────────────────────────────────────────────
 
 @app.get("/health", response_model=HealthResponse, tags=["meta"])
@@ -224,13 +220,24 @@ def _validate_ticker(ticker: str):
 
 
 def _validate_horizon(horizon: int, store):
-    # Autoregressive model rolls forward step-by-step at inference time,
-    # so any horizon value is valid regardless of what the model was trained with.
-    # We only enforce a reasonable upper bound to protect server resources.
-    MAX_HORIZON = 365
-    if horizon > MAX_HORIZON:
-        raise HTTPException(
-            status_code = 400,
-            detail      = f"horizon={horizon} exceeds maximum allowed value of {MAX_HORIZON}."
-        )
-    
+    mode = store.meta.get("training_mode", "mimo")
+    if mode == "mimo":
+        # MIMO: horizon must not exceed trained output size
+        trained_horizon = store.forecast_horizon
+        if horizon > trained_horizon:
+            raise HTTPException(
+                status_code = 400,
+                detail      = (
+                    f"MIMO model trained for horizon={trained_horizon}. "
+                    f"Requested horizon={horizon} exceeds this. "
+                    f"Use horizon <= {trained_horizon} or retrain with larger forecast_horizon."
+                ),
+            )
+    else:
+        # autoreg: any horizon up to 365 is valid (rolls forward step by step)
+        MAX_HORIZON = 365
+        if horizon > MAX_HORIZON:
+            raise HTTPException(
+                status_code = 400,
+                detail      = f"horizon={horizon} exceeds maximum of {MAX_HORIZON}."
+            )

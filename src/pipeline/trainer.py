@@ -33,6 +33,7 @@ class Trainer:
         config:         dict,
         arch:           str,
         device:         torch.device,
+        training_mode:  str = "mimo",   # "mimo" | "autoreg"
     ):
         self.model        = model.to(device)
         self.train_loader = train_loader
@@ -40,6 +41,7 @@ class Trainer:
         self.config       = config
         self.arch         = arch
         self.device       = device
+        self.training_mode = training_mode
 
         # hyperparams
         train_cfg      = config["training"]
@@ -57,13 +59,22 @@ class Trainer:
         self.criterion = nn.MSELoss()
         self.optimizer = Adam(self.model.parameters(), lr=self.lr)
         self.scheduler = ReduceLROnPlateau(
-            self.optimizer, mode="min", factor=0.5, patience=5
+            self.optimizer, mode="min", factor=0.5, patience=5, verbose=False
         )
 
         # state
         self.best_val_loss     = float("inf")
         self.epochs_no_improve = 0
         self.history           = []
+
+    def _prepare_target(self, y: torch.Tensor) -> torch.Tensor:
+        """
+        MIMO:   y shape (batch, H) — use full vector, matches model output
+        Autoreg: y shape (batch, H) — slice to (batch, 1), model predicts 1 step
+        """
+        if self.training_mode == "autoreg":
+            return y[:, :1]   # (batch, 1)
+        return y              # (batch, H)
 
     # ── epoch passes ──────────────────────────────────────────────────────────
 
@@ -72,6 +83,7 @@ class Trainer:
         total_loss = 0.0
         for X, y in self.train_loader:
             X, y = X.to(self.device), y.to(self.device)
+            y    = self._prepare_target(y)
             self.optimizer.zero_grad()
             pred = self.model(X)
             loss = self.criterion(pred, y)
@@ -87,6 +99,7 @@ class Trainer:
         with torch.no_grad():
             for X, y in self.val_loader:
                 X, y = X.to(self.device), y.to(self.device)
+                y    = self._prepare_target(y)
                 pred = self.model(X)
                 loss = self.criterion(pred, y)
                 total_loss += loss.item() * X.size(0)

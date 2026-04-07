@@ -1,7 +1,6 @@
 data:
-  ticker: "BLK"
-  period: "5y"
-  interval: "1d"               # yfinance period string
+  ticker: "AAPL"
+  period: "5y"               # yfinance period string
   window_size: 30            # W: lookback days fed to model as sequence
   features:
     - "Open"
@@ -9,22 +8,25 @@ data:
     - "Low"
     - "Close"
     - "Volume"
-    - "RSI"
-    - "MACD"
-    - "SMA_20"
+    # - "RSI"
+    # - "MACD"
+    # - "SMA_20"
 
 training:
-  forecast_horizon: 1        # single-step autoregressive — predictor rolls forward N times at inference
+  training_mode: mimo         # mimo | autoreg
+                               #   mimo   -> model output_dim = forecast_horizon (MIMO direct mapping)
+                               #   autoreg-> model output_dim = 1, rolls forward at inference
+  forecast_horizon: 30        # MIMO: number of output neurons / autoreg: steps to roll
   batch_size: 32
   epochs: 75
   lr: 0.001
   early_stopping_patience: 10
-  val_split: 0.15
-  test_split: 0.15
+  val_split: 0.0
+  test_split: 0.2
   seed: 42
 
 boruta:
-  enabled: true             # true -> run Boruta after scaling, drop unimportant features
+  enabled: false             # true -> run Boruta after scaling, drop unimportant features
   n_estimators: 100          # RandomForest trees used by Boruta
   max_iter: 100              # max Boruta iterations
   perc: 100                  # threshold percentile (100 = strict, lower = more lenient)

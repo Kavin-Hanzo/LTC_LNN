@@ -1,0 +1,62 @@
+{
+  "ticker": "WIPRO.NS",
+  "period": "5y",
+  "generated_at": "2026-04-07 11:27:17",
+  "all_features": [
+    "Open",
+    "High",
+    "Low",
+    "Close",
+    "Volume",
+    "RSI",
+    "MACD",
+    "SMA_20"
+  ],
+  "selected_features": [
+    "Open",
+    "High",
+    "Low",
+    "Close",
+    "RSI"
+  ],
+  "rejected_features": [
+    "Volume",
+    "MACD",
+    "SMA_20"
+  ],
+  "close_col_idx": 3,
+  "n_features_before": 8,
+  "n_features_after": 5,
+  "boruta_params": {
+    "n_estimators": 100,
+    "max_iter": 100,
+    "perc": 100,
+    "alpha": 0.05,
+    "max_depth": 5,
+    "random_state": 42
+  },
+  "ranking": {
+    "Open": 1,
+    "High": 1,
+    "Low": 1,
+    "Close": 1,
+    "Volume": 4,
+    "RSI": 2,
+    "MACD": 4,
+    "SMA_20": 3
+  },
+  "confirmed": [
+    "Open",
+    "High",
+    "Low",
+    "Close"
+  ],
+  "tentative": [
+    "RSI"
+  ],
+  "rejected": [
+    "Volume",
+    "MACD",
+    "SMA_20"
+  ]
+}

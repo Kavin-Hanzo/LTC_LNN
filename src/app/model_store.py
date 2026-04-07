@@ -25,17 +25,18 @@ from models import build_model
 
 @dataclass
 class ModelStore:
-    model:          nn.Module
-    scaler:         MinMaxScaler
-    meta:           dict          # contents of meta.json
-    device:         torch.device
-    arch:           str
-    ticker:         str
-    window_size:    int
+    model:           nn.Module
+    scaler:          MinMaxScaler
+    meta:            dict          # full contents of meta.json
+    device:          torch.device
+    arch:            str
+    ticker:          str
+    window_size:     int
     forecast_horizon: int
-    features:       list
-    close_col_idx:  int
-    input_dim:      int
+    training_mode:   str           # "mimo" or "autoreg"
+    features:        list
+    close_col_idx:   int
+    input_dim:       int
 
 
 # ── Module-level singleton ────────────────────────────────────────────────────
@@ -93,13 +94,15 @@ def load_store(artifacts_dir: str = "artifacts/best") -> ModelStore:
         ticker           = meta["ticker"],
         window_size      = meta["window_size"],
         forecast_horizon = meta["forecast_horizon"],
+        training_mode    = meta.get("training_mode", "mimo"),
         features         = meta["features"],
         close_col_idx    = meta["close_col_idx"],
         input_dim        = meta["input_dim"],
     )
 
     print(f"[ModelStore]  loaded arch={arch.upper()}  ticker={meta['ticker']}  "
-          f"device={device}  horizon={meta['forecast_horizon']}")
+          f"mode={meta.get('training_mode','mimo')}  "
+          f"horizon={meta['forecast_horizon']}  device={device}")
     return _store
 
 
