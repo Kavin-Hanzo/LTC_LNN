@@ -59,7 +59,7 @@ class Trainer:
         self.criterion = nn.MSELoss()
         self.optimizer = Adam(self.model.parameters(), lr=self.lr)
         self.scheduler = ReduceLROnPlateau(
-            self.optimizer, mode="min", factor=0.5, patience=5, verbose=False
+            self.optimizer, mode="min", factor=0.5, patience=5
         )
 
         # state

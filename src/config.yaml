@@ -1,7 +1,8 @@
 data:
   ticker: "AAPL"
   period: "5y"               # yfinance period string
-  window_size: 30            # W: lookback days fed to model as sequence
+  interval: "1d"
+  window_size: 60            # W: lookback days fed to model as sequence
   features:
     - "Open"
     - "High"
@@ -16,7 +17,7 @@ training:
   training_mode: mimo         # mimo | autoreg
                                #   mimo   -> model output_dim = forecast_horizon (MIMO direct mapping)
                                #   autoreg-> model output_dim = 1, rolls forward at inference
-  forecast_horizon: 30        # MIMO: number of output neurons / autoreg: steps to roll
+  forecast_horizon: 21        # MIMO: number of output neurons / autoreg: steps to roll
   batch_size: 32
   epochs: 75
   lr: 0.001
