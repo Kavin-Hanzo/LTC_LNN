@@ -409,7 +409,7 @@ def build_dataloaders(
           f"test={len(test_ds)}  (W={window_size}, H={horizon})")
 
     train_loader = DataLoader(train_ds, batch_size=batch_size,
-                              shuffle=True,  drop_last=True)
+                              shuffle=False,  drop_last=False)
     val_loader   = DataLoader(val_ds,   batch_size=batch_size,
                               shuffle=False, drop_last=False)
     test_loader  = DataLoader(test_ds,  batch_size=batch_size,

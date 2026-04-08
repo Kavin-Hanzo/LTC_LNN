@@ -104,6 +104,7 @@ def main():
     print(f"  Horizon : {horizon} days")
     print(f"  Out dim : {output_dim} neuron(s)")
     print(f"  Device  : {device}")
+    print(f"  Batch_Size  : {config['training']['batch_size']}")
     print(f"{'='*60}")
 
     # ── 1. Data
@@ -186,6 +187,7 @@ def main():
         "boruta_used":            loaders.boruta_used,
         "close_col_idx":          loaders.close_col_idx,
         "original_close_col_idx": loaders.original_close_col_idx,
+        "batch_size":             config["training"]["batch_size"],
         "input_dim":              len(loaders.feature_cols),
         "hidden_size":            config["models"]["hidden_size"],
         "num_layers":             config["models"]["num_layers"],
