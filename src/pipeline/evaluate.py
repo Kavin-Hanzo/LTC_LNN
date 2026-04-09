@@ -63,12 +63,18 @@ def plot_predictions(
     arch:      str,
     out_path:  str,
     mode:      str = "mimo",
-    n_samples: int = 200,
+    max_samples: int = None,
 ):
     """
-    Plot predicted vs actual Close prices on the test set.
-    For MIMO: plots step-1 (next day) prediction vs actual.
+    Plot predicted vs actual Close prices across ALL test samples.
+
+    For MIMO:   plots step-1 (next day) prediction vs actual.
     For autoreg: plots the single predicted step vs actual.
+
+    Args:
+        max_samples: if set, subsample to this many points evenly.
+                     Default None = plot all samples.
+                     Only set this for very large datasets (e.g. minute-level).
     """
     try:
         import matplotlib
@@ -82,10 +88,16 @@ def plot_predictions(
     y_true = truths[:, 0].reshape(-1)
     y_pred = preds[:,  0].reshape(-1)
 
-    if len(y_true) > n_samples:
-        idx    = np.linspace(0, len(y_true) - 1, n_samples, dtype=int)
+    total_samples = len(y_true)
+
+    # only subsample if explicitly requested AND dataset exceeds the cap
+    if max_samples and total_samples > max_samples:
+        idx    = np.linspace(0, total_samples - 1, max_samples, dtype=int)
         y_true = y_true[idx]
         y_pred = y_pred[idx]
+        sample_note = f" (subsampled {max_samples}/{total_samples})"
+    else:
+        sample_note = f" ({total_samples} samples)"
 
     x = np.arange(len(y_true))
 
@@ -101,7 +113,8 @@ def plot_predictions(
     ax.fill_between(x, y_true, y_pred, alpha=0.07, color="#ffffff")
     mode_label = "MIMO step+1" if mode == "mimo" else "autoreg step+1"
     ax.set_title(
-        f"{arch.upper()} -- Predicted vs Actual Close Price ({mode_label}, test set)",
+        f"{arch.upper()} — Predicted vs Actual Close Price  "
+        f"({mode_label}, test set{sample_note})",
         color="black", fontsize=13, pad=10
     )
     ax.set_ylabel("Price ($)", color="black")
