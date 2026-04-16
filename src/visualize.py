@@ -71,24 +71,32 @@ def load_predictions(arch: str, base_dir: str = "artifacts") -> tuple:
 # ── Plot 1: Trend line ────────────────────────────────────────────────────────
 
 def plot_trend(
-    truths: np.ndarray,
-    preds:  np.ndarray,
-    arch:   str,
-    step:   int = 0,
-    n_samples: int = 200,
-    out_path: str = None,
+    truths:      np.ndarray,
+    preds:       np.ndarray,
+    arch:        str,
+    step:        int = 0,
+    max_samples: int = None,
+    out_path:    str = None,
 ):
     """
     Predicted vs actual Close price trend line for a given forecast step.
-    Bottom panel shows residuals as a bar chart.
+    Plots ALL test samples by default.
+
+    Args:
+        max_samples: if set, subsample evenly to this many points.
+                     Only needed for very large datasets.
     """
     y_true = truths[:, step]
     y_pred = preds[:,  step]
 
-    if len(y_true) > n_samples:
-        idx    = np.linspace(0, len(y_true) - 1, n_samples, dtype=int)
+    total = len(y_true)
+    if max_samples and total > max_samples:
+        idx    = np.linspace(0, total - 1, max_samples, dtype=int)
         y_true = y_true[idx]
         y_pred = y_pred[idx]
+        note   = f"subsampled {max_samples}/{total}"
+    else:
+        note   = f"{total} samples"
 
     x = np.arange(len(y_true))
 
@@ -104,7 +112,7 @@ def plot_trend(
             linestyle="--")
     ax.fill_between(x, y_true, y_pred, alpha=0.07, color=TEXT_C)
     ax.set_title(
-        f"{arch.upper()} — Predicted vs Actual  |  step+{step+1} forecast",
+        f"{arch.upper()} — Predicted vs Actual  |  step+{step+1}  ({note})",
         color=TEXT_C, fontsize=13, pad=10
     )
     ax.set_ylabel("Price ($)", color=TEXT_C)
@@ -241,14 +249,17 @@ def plot_scatter(
 # ── Plot 4: Multi-model comparison ───────────────────────────────────────────
 
 def plot_compare(
-    base_dir:  str = "artifacts",
-    step:      int = 0,
-    n_samples: int = 200,
-    out_path:  str = None,
+    base_dir:    str = "artifacts",
+    step:        int = 0,
+    max_samples: int = None,
+    out_path:    str = None,
 ):
     """
     Overlay predicted trend lines for all trained models on the same chart.
-    Uses the actual prices from the first available model as ground truth.
+    Plots ALL test samples by default.
+
+    Args:
+        max_samples: if set, subsample all models to the same N points evenly.
     """
     available = []
     for arch in SUPPORTED_MODELS:
@@ -264,28 +275,36 @@ def plot_compare(
     fig.patch.set_facecolor(BG)
     ax.set_facecolor(PANEL_BG)
 
-    truths_ref = None
+    truths_ref  = None
+    total_shown = None
 
     for i, arch in enumerate(available):
         truths, preds = load_predictions(arch, base_dir)
         y_pred = preds[:, step]
+        total  = len(y_pred)
 
-        # subsample consistently
-        n = min(len(y_pred), n_samples)
-        idx = np.linspace(0, len(y_pred) - 1, n, dtype=int)
-        y_pred = y_pred[idx]
+        # subsample only if explicitly requested
+        if max_samples and total > max_samples:
+            idx    = np.linspace(0, total - 1, max_samples, dtype=int)
+            y_pred = y_pred[idx]
+        else:
+            idx    = np.arange(total)
 
         if truths_ref is None:
-            truths_ref = truths[:, step][idx]
-            x = np.arange(len(truths_ref))
+            truths_ref  = truths[:, step][idx]
+            total_shown = len(truths_ref)
+            x = np.arange(total_shown)
             ax.plot(x, truths_ref, color=ACTUAL, lw=2.0,
                     label="Actual", alpha=0.95, zorder=5)
 
         ax.plot(x[:len(y_pred)], y_pred, color=COLORS[i % len(COLORS)],
                 lw=1.5, label=arch.upper(), alpha=0.85, linestyle="--")
 
-    ax.set_title(f"Model Comparison — Predicted vs Actual  |  step+{step+1}",
-                 color=TEXT_C, fontsize=13, pad=10)
+    note = f"{total_shown} samples" if total_shown else ""
+    ax.set_title(
+        f"Model Comparison — Predicted vs Actual  |  step+{step+1}  ({note})",
+        color=TEXT_C, fontsize=13, pad=10
+    )
     ax.set_xlabel("Test sample index", color=TEXT_C)
     ax.set_ylabel("Price ($)",         color=TEXT_C)
     ax.tick_params(colors=TEXT_C)
@@ -317,6 +336,9 @@ def parse_args():
                         help="Overlay all trained models on one chart")
     parser.add_argument("--all",           action="store_true",
                         help="Generate all plots for the given model")
+    parser.add_argument("--max-samples",   type=int, default=None,
+                        help="Subsample to N points for very large datasets. "
+                             "Default: plot all samples.")
     parser.add_argument("--out",           type=str, default=None,
                         help="Custom output path for the plot PNG")
     parser.add_argument("--base-dir",      type=str, default="artifacts")
@@ -328,7 +350,8 @@ def main():
 
     if args.compare:
         print("\n[visualize]  compare plot ...")
-        plot_compare(base_dir=args.base_dir, step=args.step, out_path=args.out)
+        plot_compare(base_dir=args.base_dir, step=args.step,
+                     max_samples=args.max_samples, out_path=args.out)
         return
 
     if not args.model:
@@ -339,10 +362,13 @@ def main():
     print(f"\n[visualize]  arch={args.model.upper()}  step={args.step}")
     truths, preds = load_predictions(args.model, args.base_dir)
     print(f"  predictions shape: truths={truths.shape}  preds={preds.shape}")
+    print(f"  total test samples: {truths.shape[0]}"
+          + (f"  (will subsample to {args.max_samples})" if args.max_samples else "  (plotting all)"))
 
     if args.all or (not args.horizon_error and not args.scatter):
         print("  -> trend plot ...")
         plot_trend(truths, preds, args.model, step=args.step,
+                   max_samples=args.max_samples,
                    out_path=args.out if not args.all else None)
 
     if args.all or args.horizon_error:
