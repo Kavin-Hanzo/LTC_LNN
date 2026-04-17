@@ -271,8 +271,15 @@ def train_variant(model, train_ds, val_ds, args, variant, label, scalers=None):
     cfg_train.patience = args.patience
     history = train(model, train_ds, val_ds, cfg_train, CFG.resolve_device(), checkpoint)
     
-    # Save scalers with the checkpoint for inference
+    # Save scalers as pickle files for inference
     if scalers is not None:
+        os.makedirs(args.models_dir, exist_ok=True)
+        for ticker, scaler in scalers.items():
+            scaler_path = os.path.join(args.models_dir,
+                                       f"scaler_{ticker}_{variant}_{label}.pkl")
+            scaler.save(scaler_path)
+            print(f"  [Saved scaler] {scaler_path}")
+        # Keep a copy inside the checkpoint too, for convenience
         ckpt = torch.load(checkpoint, map_location="cpu")
         ckpt["scalers"] = scalers
         torch.save(ckpt, checkpoint)

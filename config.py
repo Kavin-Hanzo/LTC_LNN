@@ -10,7 +10,7 @@ import os
 @dataclass
 class DataConfig:
     tickers:       List[str] = field(default_factory=lambda: [
-                       "AAPL", "MSFT", "GOOGL", "META", "IBM", "NVDA"
+                       "AAPL", "MSFT", "GOOGL", "META" #"IBM", "NVDA"
                    ])
     history_years: List[int] = field(default_factory=lambda: [5]) #tocheck
     interval:      str  = "1d"
@@ -37,7 +37,7 @@ class ScalerConfig:
 
 @dataclass
 class VectorConfig:
-    n_components:    int   = 4
+    n_components:    int   = 3
     vectors_dir:     str   = "outputs/vectors"
     good_variance:   float = 0.90
     fair_variance:   float = 0.75
