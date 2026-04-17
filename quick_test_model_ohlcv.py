@@ -247,7 +247,10 @@ def prepare_data(args):
         tr, va, te = chronological_split(df, args.train_ratio, args.val_ratio)
         scaled_splits[ticker] = scale_splits(tr, va, te, cols, args.scaler_method)
 
-    return raw, processed, aligned, vectors, scaled_splits
+    # Extract scalers for saving with model checkpoints
+    scalers = {t: scaled_splits[t][3] for t in scaled_splits}
+
+    return raw, processed, aligned, vectors, scaled_splits, scalers
 
 
 def make_model(args, identity_dim, use_identity):
@@ -258,7 +261,7 @@ def make_model(args, identity_dim, use_identity):
     return build_model(cfg, len(_OHLCV_COLS) if args.feature_set == "ohlcv" else len(IND_FEATURE_COLS), args.horizon)
 
 
-def train_variant(model, train_ds, val_ds, args, variant, label):
+def train_variant(model, train_ds, val_ds, args, variant, label, scalers=None):
     checkpoint = os.path.join(args.models_dir, f"{variant}_{label}.pt")
     cfg_train = deepcopy(CFG.training)
     cfg_train.batch_size = args.batch_size
@@ -267,6 +270,14 @@ def train_variant(model, train_ds, val_ds, args, variant, label):
     cfg_train.weight_decay = args.weight_decay
     cfg_train.patience = args.patience
     history = train(model, train_ds, val_ds, cfg_train, CFG.resolve_device(), checkpoint)
+    
+    # Save scalers with the checkpoint for inference
+    if scalers is not None:
+        ckpt = torch.load(checkpoint, map_location="cpu")
+        ckpt["scalers"] = scalers
+        torch.save(ckpt, checkpoint)
+        print(f"  [Saved scalers] {checkpoint}")
+    
     return history, checkpoint
 
 
@@ -277,7 +288,7 @@ def evaluate_variant(model, dataset, args):
 
 
 def compare_variants(args, prepared):
-    raw, processed, aligned, vectors, scaled_splits = prepared
+    raw, processed, aligned, vectors, scaled_splits, scalers = prepared
     variants = get_variant_list(args)
     print(f"Comparing variants: {variants}")
     results = {}
@@ -307,7 +318,7 @@ def compare_variants(args, prepared):
         )
 
         model = make_model(args, identity_dim, use_identity)
-        history, ckpt = train_variant(model, tr_ds, va_ds, args, variant, args.label)
+        history, ckpt = train_variant(model, tr_ds, va_ds, args, variant, args.label, scalers)
         per_stock, agg, preds = evaluate_variant(model, te_ds, args)
 
         results[variant] = {
@@ -427,7 +438,7 @@ def main():
         compare_variants(args, prepared)
 
     if args.stage == "evaluate":
-        raw, processed, aligned, vectors, scaled_splits = prepared
+        raw, processed, aligned, vectors, scaled_splits, scalers = prepared
         for variant in variants:
             if variant == "baseline":
                 id_map = {t: zero_vector(CFG.vectors.n_components) for t in processed.keys()}
@@ -452,8 +463,10 @@ def main():
             model = make_model(args, identity_dim, use_identity)
             model_path = os.path.join(args.models_dir, f"{variant}_{args.label}.pt")
             if os.path.exists(model_path):
-                load_checkpoint(model, model_path)
+                ckpt = load_checkpoint(model, model_path)
                 print(f"Loaded checkpoint {model_path}")
+                if "scalers" in ckpt:
+                    print(f"  Scalers available for inference: {list(ckpt['scalers'].keys())}")
                 evaluate_variant(model, ds, args)
             else:
                 print(f"Checkpoint not found for {variant}: {model_path}. Train first or set --stage train.")

@@ -13,6 +13,7 @@ from data.indicators import compute_all, FEATURE_COLS
 from data.scaler import chronological_split, scale_splits
 from data.dataset import build_datasets
 from vectors.stock2vec import build as build_vectors
+from visualization import plotter
 
 
 def parse_args():
@@ -50,6 +51,11 @@ def parse_args():
     parser.add_argument(
         "--vectors-dir",
         default=CFG.vectors.vectors_dir,
+        help="Directory to write Stock2Vec CSV outputs."
+    )
+    parser.add_argument(
+        "--plots-dir",
+        default=CFG.experiments.plots_dir,
         help="Directory to write Stock2Vec CSV outputs."
     )
     parser.add_argument(
@@ -118,6 +124,11 @@ def run_indicators(raw, args):
     print(f"Computed indicators for {len(processed)} tickers.")
     for ticker, (df_feat, cols) in processed.items():
         print(f"  {ticker:6s}  rows={len(df_feat)}  features={cols}")
+    
+    # Plot indicator dashboards
+    for ticker, (df_feat, _) in processed.items():
+        plotter.indicator_dashboard(df_feat, ticker, args.plots_dir, args.label)
+    
     return processed
 
 
