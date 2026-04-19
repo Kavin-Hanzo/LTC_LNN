@@ -10,9 +10,9 @@ import os
 @dataclass
 class DataConfig:
     tickers:       List[str] = field(default_factory=lambda: [
-                       "AAPL", "MSFT", "GOOGL", "META" #"IBM", "NVDA"
+                       "AAPL", "MSFT", "GOOGL", "META", "IBM", "NVDA"
                    ])
-    history_years: List[int] = field(default_factory=lambda: [5]) #tocheck
+    history_years: List[int] = field(default_factory=lambda: [10]) #tocheck
     interval:      str  = "1d"
     raw_dir:       str  = "outputs/raw"
 
@@ -37,7 +37,7 @@ class ScalerConfig:
 
 @dataclass
 class VectorConfig:
-    n_components:    int   = 3
+    n_components:    int   = 4
     vectors_dir:     str   = "outputs/vectors"
     good_variance:   float = 0.90
     fair_variance:   float = 0.75
@@ -49,9 +49,9 @@ class VectorConfig:
 class LNNConfig:
     # Parameters for the Liquid Neural Network (LTC-based ODE cell).
     # Only used when ModelConfig.arch == "lnn".
-    tau_constant: float = 1.0   # membrane time-constant τ (higher = slower decay)
-    dt:           float = 0.1   # Euler integration step   (smaller = more precise)
-    ode_unfolds:  int   = 2     # Euler steps per time-step (higher = finer approx)
+    tau_constant: float = 3.0   # membrane time-constant τ (higher = slower decay)
+    dt:           float = 0.3   # Euler integration step   (smaller = more precise)
+    ode_unfolds:  int   = 1     # Euler steps per time-step (higher = finer approx)
 
 
 @dataclass
@@ -61,7 +61,7 @@ class ModelConfig:
     # "gru"  : Gated Recurrent Unit     — fewer params, trains faster
     # "rnn"  : Vanilla RNN              — simplest, good weak baseline
     # "lnn"  : Liquid Neural Network    — ODE-based continuous-time dynamics
-    arch: str = "rnn"    #tocheck
+    arch: str = "lnn"    #tocheck
 
     hidden_size:    int   = 64
     num_layers:     int   = 2       # 2=light  3=medium  4=deep
@@ -80,12 +80,14 @@ class TrainingConfig:
     # SHORT: 30-day context → predict next 5 days  (1 trading week)
     # LONG : 120-day context → predict next 21 days (1 trading month)
     modes: Dict = field(default_factory=lambda: {        
-        "short": {"lookback": 30,  "horizon": 5},      #tocheck
-        "long":  {"lookback": 120, "horizon": 21},
+        "week": {"lookback": 30,  "horizon": 5},      #tocheck
+        "mon":  {"lookback": 180, "horizon": 21},
+        "3mon":  {"lookback": 450, "horizon": 63},
+        "6mon":  {"lookback": 900, "horizon": 125}
     })
     train_ratio:  float = 0.70
     val_ratio:    float = 0.15
-    # test_ratio  = 1 - train_ratio - val_ratio  (always chronological)
+    #test_ratio  = 1 - train_ratio - val_ratio  #(always chronological)
     batch_size:   int   = 64
     epochs:       int   = 100
     lr:           float = 1e-3

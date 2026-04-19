@@ -280,9 +280,11 @@ def train_variant(model, train_ds, val_ds, args, variant, label, scalers=None):
             scaler.save(scaler_path)
             print(f"  [Saved scaler] {scaler_path}")
         # Keep a copy inside the checkpoint too, for convenience
-        ckpt = torch.load(checkpoint, map_location="cpu")
+        # ckpt = torch.load(checkpoint, map_location="cpu")
+        model, ckpt = load_checkpoint(checkpoint)
+        model.to(CFG.resolve_device())  # Move to device if needed
         ckpt["scalers"] = scalers
-        torch.save(ckpt, checkpoint)
+        torch.save(ckpt, checkpoint)  # ckpt -> model
         print(f"  [Saved scalers] {checkpoint}")
     
     return history, checkpoint

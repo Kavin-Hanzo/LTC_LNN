@@ -281,7 +281,7 @@ def train_variant(model, train_ds, val_ds, args, variant, label, scalers=None):
             scaler.save(scaler_path)
             print(f"  [Saved scaler] {scaler_path}")
         # Keep a copy inside the checkpoint too, for convenience
-        ckpt = torch.load(checkpoint, map_location="cpu")
+        ckpt = torch.load(checkpoint, map_location="cpu",weights_only=False)
         ckpt["scalers"] = scalers
         torch.save(ckpt, checkpoint)
         print(f"  [Saved scalers] {checkpoint}")
@@ -374,7 +374,7 @@ def compare_variants(args, prepared):
 
 
 def run_experiments(args, prepared):
-    raw, processed, aligned, vectors, scaled_splits = prepared
+    raw, processed, aligned, vectors, scaled_splits, _ = prepared
     chosen = args.experiment
     if not chosen:
         print("No experiment selected. Use --experiment e1/e3/e4 or all.")

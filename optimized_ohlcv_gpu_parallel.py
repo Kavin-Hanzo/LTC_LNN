@@ -201,7 +201,7 @@ def parse_args():
     parser.add_argument(
         "--num-workers",
         type=int,
-        default=4,
+        default=8,
         help="Number of workers for DataLoader parallel processing."
     )
     parser.add_argument(

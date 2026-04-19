@@ -110,14 +110,20 @@ def train(model:           BaseModel,
 
     if checkpoint_path:
         os.makedirs(os.path.dirname(checkpoint_path) or ".", exist_ok=True)
-        torch.save({"state": model.state_dict(), "history": history,
-                    "best_val": stopper.best_loss}, checkpoint_path)
+        # torch.save({"state": model.state_dict(), "history": history,
+        #             "best_val": stopper.best_loss}, checkpoint_path)
+        torch.save({"model": model, "history": history, "best_val": stopper.best_loss}, checkpoint_path)
         print(f"  [Saved] {checkpoint_path}")
 
     return history
 
 
-def load_checkpoint(model: BaseModel, path: str) -> dict:
-    ckpt = torch.load(path, map_location="cpu")
-    model.load_state_dict(ckpt["state"])
-    return ckpt
+# def load_checkpoint(model: BaseModel, path: str) -> dict:
+#     ckpt = torch.load(path, map_location="cpu")
+#     model.load_state_dict(ckpt["state"])
+#     return ckpt
+
+def load_checkpoint(path: str) -> tuple:  # Return model and ckpt dict
+    ckpt = torch.load(path, map_location="cpu", weights_only=False)
+    model = ckpt["model"]
+    return model, ckpt  # Or adjust return type as needed

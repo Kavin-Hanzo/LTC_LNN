@@ -72,13 +72,13 @@ def parse_args():
     parser.add_argument(
         "--lookback",
         type=int,
-        default=CFG.training.modes["short"]["lookback"],
+        default=CFG.training.modes["3mon"]["lookback"],
         help="Lookback length to use when inspecting dataset shapes."
     )
     parser.add_argument(
         "--horizon",
         type=int,
-        default=CFG.training.modes["short"]["horizon"],
+        default=CFG.training.modes["3mon"]["horizon"],
         help="Horizon length to use when inspecting dataset shapes."
     )
     parser.add_argument(
