@@ -51,7 +51,7 @@ class LNNConfig:
     # Only used when ModelConfig.arch == "lnn".
     tau_constant: float = 3.0   # membrane time-constant τ (higher = slower decay)
     dt:           float = 0.3   # Euler integration step   (smaller = more precise)
-    ode_unfolds:  int   = 1     # Euler steps per time-step (higher = finer approx)
+    ode_unfolds:  int   = 2     # Euler steps per time-step (higher = finer approx)
 
 
 @dataclass
