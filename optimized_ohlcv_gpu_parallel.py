@@ -93,7 +93,7 @@ def parse_args():
     )
     parser.add_argument(
         "--label",
-        default="optimized_ohlcv",
+        default="quicktest",
         help="Suffix for saved outputs and experiment labels."
     )
     parser.add_argument(
@@ -314,7 +314,7 @@ def train_variant(model, train_ds, val_ds, args, variant, label, scalers=None, d
             scaler.save(scaler_path)
             print(f"  [Saved scaler] {scaler_path}")
         # Keep a copy inside the checkpoint too, for convenience
-        ckpt = torch.load(checkpoint, map_location="cpu")
+        ckpt = torch.load(checkpoint, map_location="cpu",weight_only=False)
         ckpt["scalers"] = scalers
         torch.save(ckpt, checkpoint)
         print(f"  [Saved scalers] {checkpoint}")

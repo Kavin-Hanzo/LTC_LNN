@@ -91,7 +91,7 @@ def parse_args():
     parser.add_argument(
         "--mode",
         choices=list(CFG.training.modes.keys()),
-        default="short",
+        default="week",
         help="Train/eval mode: short or long."
     )
     parser.add_argument(

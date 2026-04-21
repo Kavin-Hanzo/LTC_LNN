@@ -150,8 +150,9 @@ def run(vectors: Dict[str, np.ndarray],
     _save(fig4, plots_dir, f"e1_loadings{sfx}.png")
 
     # ── Silhouette score ──────────────────────────────────────────
-    sec_ids = np.array([list(set(_SECTOR.values())).index(
-                            _SECTOR.get(t, "Unknown")) for t in tickers])
+    sector_labels = sorted(set(_SECTOR.values()) | {"Unknown"})
+    sec_ids = np.array([sector_labels.index(_SECTOR.get(t, "Unknown"))
+                        for t in tickers])
     try:
         sil = silhouette_score(V, sec_ids) if len(set(sec_ids)) > 1 else None
     except Exception:
